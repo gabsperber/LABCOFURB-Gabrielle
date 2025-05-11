@@ -1,0 +1,196 @@
+---
+title: "Gabrielle Sperber"
+format: html
+editor: visual
+---
+
+```{r}
+#| label: pacotes-e-dados
+#| include: false
+
+install.packages("ggtext", repos = "https://cloud.r-project.org")
+
+library(tidyverse)
+library(WDI)
+library(ggtext)
+```
+
+```{r}
+#| label: load-data
+#| include: false
+
+options(scipen = 999)  # Evita notação científica
+
+# DADOS GERAIS
+dadosexpec <- WDI(country = "all", indicator = "SP.DYN.LE00.IN")
+
+# BRASIL (série temporal)
+dadosexpecbr <- WDI(country = "BR", indicator = "SP.DYN.LE00.IN")
+
+# DADOS DE CORTE TRANSVERSAL PARA 2023
+dadosexpec2023 <- WDI(country = "all", indicator = "SP.DYN.LE00.IN", start = 2023, end = 2023)
+
+# Dados do Brasil para gráfico 1
+dados_brasil <- filter(dadosexpec, country == "Brazil")
+
+# Define cores por país (gráfico 2)
+dadosexpec2023 <- dadosexpec2023 %>%
+  mutate(cor = case_when(
+    iso2c == "BR" ~ "#1b9e77",    # Verde
+    iso2c == "US" ~ "#377eb8",    # Azul
+    TRUE ~ "gray80"
+  ))
+```
+
+## Expectativa de Vida
+
+A expectativa de vida é um indicador que estima quantos anos, em média, uma pessoa pode viver ao nascer, refletindo fatores como saúde pública, infraestrutura, segurança alimentar, educação, economia e estabilidade política. Considerada um dos principais indicadores do desenvolvimento socioeconômico, ela permite comparar condições de vida entre países e orientar políticas públicas e investimentos em áreas essenciais.\
+\
+**Dados em Painel\
+**\
+O gráfico mostra a evolução da expectativa de vida ao nascer entre 2000 e 2023 em seis países, destacando o avanço gradual do Brasil e a estabilidade dos países europeus em níveis elevados. O Brasil, embora tenha registrado um crescimento significativo na expectativa de vida, ainda enfrenta desafios em áreas como desigualdade social e acesso à saúde, o que reflete em uma expectativa de vida abaixo de países europeus mais desenvolvidos. Apesar de seu poder econômico, os Estados Unidos apresentaram expectativa de vida inferior à dos europeus, evidenciando desigualdades e desafios no sistema de saúde. O gráfico ressalta o progresso de nações em desenvolvimento, como o Brasil, e as disparidades globais, destacando a relevância de políticas públicas voltadas à melhoria da qualidade de vida e à promoção da longevidade, com foco em sistemas de saúde mais equitativos e acessíveis.\
+\
+
+```{r}
+#| label: graficoexpectativa-barra
+#| warning: false
+#| echo: false
+
+library(dplyr)
+library(ggplot2)
+
+# Filtrar dados apenas para os anos desejados
+dados_anos_especificos <- filter(dadosexpec, year %in% c(2000, 2010, 2020, 2023))
+
+# Selecionar os países específicos
+pais_comparacao <- c("Brazil", "United States", "Germany", "France", "Italy")
+dados_comparacao <- filter(dados_anos_especificos, country %in% pais_comparacao)
+
+# Criar coluna com ajuste de texto vertical
+dados_comparacao <- dados_comparacao %>%
+  mutate(vjust_ajuste = case_when(
+    country == "France" ~ -1.2,
+    country == "Italy" ~ -1.2,
+    country == "Germany" ~ -1.0,
+    TRUE ~ -0.5
+  ))
+
+# Gráfico de barras com nomes ajustados acima das colunas
+graficoexpectativa_barra <- ggplot(dados_comparacao, aes(x = factor(year), y = SP.DYN.LE00.IN, fill = country)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.6, show.legend = FALSE) +
+
+  # Nomes dos países ajustados acima das barras
+  geom_text(aes(label = country, vjust = vjust_ajuste),
+            position = position_dodge(width = 0.8),
+            color = "black", size = 3.2, angle = 0) +
+
+  # Personalização das cores
+  scale_fill_manual(values = c("Brazil" = "#228B22", 
+                               "United States" = "#1E90FF", 
+                               "Germany" = "gray60", 
+                               "France" = "gray60", 
+                               "Italy" = "gray60")) +
+
+  # Títulos e rótulos
+  labs(
+    title = "Expectativa de Vida ao Nascer (2000, 2010, 2020, 2023)",
+    subtitle = "Brasil (verde) e EUA (azul) em destaque. Outros países em cinza.",
+    x = "Ano",
+    y = "Expectativa de Vida (anos)"
+  ) +
+
+  theme_minimal(base_family = "Helvetica") +
+  theme(
+    plot.title = element_text(size = 16, face = "bold", color = "black"),
+    plot.subtitle = element_text(size = 12, color = "gray40", margin = margin(b = 10)),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(color = "gray30"),
+    plot.background = element_rect(fill = "#f9f9f9", color = NA),
+    axis.text.x = element_text(size = 11),
+    axis.text.y = element_text(size = 10)
+  )
+
+print(graficoexpectativa_barra)
+```
+
+**Corte Transversal**\
+\
+O gráfico compara a expectativa de vida ao nascer em 2023 entre dez países, evidenciando a relação direta entre nível de desenvolvimento e longevidade. Nações desenvolvidas como Japão, Austrália, Canadá e Alemanha superam os 80 anos de expectativa, refletindo investimentos robustos em saúde, saneamento e políticas sociais. Em contraste, países como Nigéria, África do Sul e Índia enfrentam sérios desafios estruturais que comprometem a qualidade de vida e reduzem a expectativa para menos de 60 anos, no caso nigeriano. O Brasil ocupa posição intermediária, superando várias nações subdesenvolvidas, mas ainda distante dos índices dos países mais ricos, enquanto os Estados Unidos destoam entre os desenvolvidos, com expectativa inferior devido a desigualdades e falhas no sistema de saúde.\
+\
+\
+
+```{r}
+#| label: graficoexpeccorte
+#| warning: false
+#| echo: false  
+
+library(WDI)
+library(ggplot2)
+library(dplyr)
+
+# Lista de códigos ISO-3 dos países selecionados
+paises_comparacao <- c("BRA", "IND", "CHN", "NGA", "ZAF", 
+                       "USA", "DEU", "JPN", "AUS", "CAN")
+
+# Dados de expectativa de vida para os países selecionados em 2023
+dadosexpec2023 <- WDI(country = paises_comparacao, indicator = "SP.DYN.LE00.IN", start = 2023, end = 2023)
+
+# Gráfico com as modificações
+graficoexpeccorte <- ggplot(dadosexpec2023, aes(x = country, y = SP.DYN.LE00.IN, group = 1)) +
+  geom_line(aes(color = country), size = 1) +  # Adiciona a linha
+  geom_point(aes(color = country), size = 3) +  # Adiciona os pontos
+  labs(
+    title = "Expectativa de Vida ao Nascer em 2023",
+    subtitle = "Países Desenvolvidos vs Subdesenvolvidos",
+    x = "País",
+    y = "Expectativa de Vida ao Nascer (anos)"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1),
+    axis.title = element_text(size = 12),
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12, color = "gray40", margin = margin(b = 10)),
+    legend.position = "none"  # Remove a legenda
+  )
+
+# Exibir o gráfico
+print(graficoexpeccorte)
+```
+
+**Série Temporal\
+**\
+O gráfico mostra a evolução da expectativa de vida no Brasil entre 2015 e 2023, revelando uma tendência geral de crescimento, com valores acima dos 75 anos, refletindo avanços em saúde, educação e qualidade de vida. Entre 2019 e 2021, há uma leve queda atribuída ao impacto da pandemia de Covid-19, que aumentou os índices de mortalidade. A partir de 2022, observa-se uma recuperação gradual, sinalizando a retomada do progresso com o controle da pandemia e a reestruturação dos serviços de saúde. O gráfico destaca a importância de políticas públicas consistentes e demonstra como crises sanitárias podem interromper avanços em indicadores de desenvolvimento humano.\
+\
+\
+
+```{r}
+#| label: graficoexpecserie
+#| warning: false
+#| echo: false
+
+library(dplyr)
+library(ggplot2)
+
+# Filtrar apenas os anos de 2015 a 2023
+dados_filtrados <- dadosexpecbr %>%
+  filter(year >= 2015 & year <= 2023)
+
+# Gráfico de barras horizontais
+graficoexpecserie <- ggplot(dados_filtrados, aes(x = SP.DYN.LE00.IN, y = factor(year))) +
+  geom_col(fill = "pink", width = 0.6) +
+  labs(
+    title = "Expectativa de Vida no Brasil (2015–2023)",
+    x = "Expectativa de Vida (anos)",
+    y = "Ano"
+  ) +
+  theme_minimal(base_family = "Helvetica") +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(color = "gray30"),
+    legend.position = "none"
+  )
+
+print(graficoexpecserie)
+```
