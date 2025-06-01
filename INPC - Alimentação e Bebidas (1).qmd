@@ -1,0 +1,86 @@
+---
+title: "INPC 'Alimentação e Bebidas' - Gabrielle Sperber "
+format: html
+editor: visual
+---
+
+```{r}
+#| label: load-packages
+#| include: false
+
+library(GetBCBData)
+library(tidyverse)
+library(zoo)
+library(ggplot2)
+library(gganimate)
+library(dplyr)
+library(transformr)
+library(gifski)
+library(Cairo)
+library(magick)
+```
+
+```{r}
+#| label: load-data
+#| include: false
+
+# Baixar dados do INPC (código 1644)
+my.id <- c(inpc = 1644)
+
+df.bcb <- gbcbd_get_series(id = my.id,
+                           first.date = '1990-02-01',
+                           last.date = Sys.Date(),
+                           format.data = 'long',
+                           use.memoise = TRUE,
+                           cache.path = tempdir(),
+                           do.parallel = FALSE)
+```
+
+O INPC é um índice que mede a variação de preços de produtos e serviços consumidos por famílias com renda mensal entre 1 e 5 salários mínimos, refletindo a inflação para essa faixa de renda. A categoria de Alimentação e Bebidas, especificamente, acompanha as mudanças nos preços de itens essenciais como arroz, feijão, carnes, frutas e bebidas, que têm grande peso no orçamento dessas famílias. \
+\
+Apresenta grande importância para análises econômicas e formulação de políticas públicas. O INPC serve como referência para reajustes salariais, correção de benefícios sociais e contratos de aluguel, sendo um indicador crucial para entender o impacto da inflação sobre a população de menor renda.\
+\
+**Evolução do INPC - Alimentação e Bebidas: 1990 até 2025\
+\
+**Nos anos 1990, observa-se grande volatilidade devido à hiperinflação e às reformas monetárias, com alta expressiva nos preços até a implantação do Plano Real em 1994, que estabilizou temporariamente a inflação. A partir dos anos 2000, o índice mantém uma tendência de alta moderada, com picos em momentos de crise econômica, como em 2008 (crise financeira global) e em 2015-2016 (recessão brasileira). \
+\
+Entre 2020 e 2022, há um novo aumento acentuado devido à pandemia da COVID-19 e à instabilidade nos mercados globais, afetando cadeias de suprimentos e elevando os preços de alimentos. Após 2023, a inflação do setor começa a desacelerar, refletindo medidas de controle econômico e melhora no abastecimento. O gráfico, portanto, evidencia como fatores internos e externos influenciaram diretamente o poder de compra das famílias brasileiras, especialmente daquelas de baixa renda.\
+\
+
+```{r}
+#| label: graf1
+#| warning: false
+#| echo: false
+
+# Adiciona um ID sequencial para usar como "frame" no geom_text
+df.bcb <- df.bcb %>%
+  arrange(ref.date) %>%
+  mutate(frame_id = row_number())
+
+p <- ggplot(df.bcb, aes(x = ref.date, y = value)) +
+  geom_line(color = "hotpink", size = 1) +
+  geom_point(color = "black") +
+  geom_text(aes(label = sprintf("%.2f%%", value)), 
+            vjust = -1, 
+            size = 4,
+            check_overlap = TRUE) +
+  labs(
+    title = 'Evolução do INPC - Alimentação e Bebidas',
+    subtitle = 'Ano: {frame_along}',
+    x = 'Ano',
+    y = 'Variação Mensal(%)'
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.background = element_rect(fill = "#e5e5e5", color = NA),
+    plot.background = element_rect(fill = "#e5e5e5", color = NA)
+  ) +
+  transition_reveal(ref.date)
+
+animate(p, nframes = 120, fps = 20)
+
+```
+
+**Banco Central do Brasil.** Séries Temporais – Código 1644: INPC - Alimentação e Bebidas. Disponível em: https://www3.bcb.gov.br/sgspub. Acesso em: 1 jun. 2025.\
+\
+**Instituto Brasileiro de Geografia e Estatística (IBGE).** Sistema Nacional de Índices de Preços ao Consumidor – INPC: Alimentação e Bebidas. Disponível em: <https://www.ibge.gov.br>. Acesso em: 1 jun. 2025.
